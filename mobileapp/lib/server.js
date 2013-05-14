@@ -7,23 +7,24 @@ var http = require("http"),
     config = require("./config").config,
     locales = require("./locales").locales,
     referee = require("./referee"),
+    consolidate = require("consolidate"),
     te = require("./tableevents").TableEvents;
 
-var app = express.createServer(),
-    sockapp = express.createServer(); 
+var app = express(),
+    sockapp = express();
 
 app.configure(function() {
   app.set("views", __dirname + "/../views");
   app.set("view options", {layout: false});
   app.set("view engine", "html");
-
-  app.register(".html", {
-    compile: function(str, options){
-      return function(locals){
-        return mustache.to_html(str, locals);
-      };
-    }
-  });
+  app.engine('html',consolidate.mustache);
+//  app.engine(".html", {
+//    compile: function(str, options){
+//      return function(locals){
+//        return mustache.to_html(str, locals);
+//      };
+//    }
+//  });
   //app.use(express.compiler({ src: __dirname + "/../public", enable: ["less"] }));
   app.use(express.favicon(__dirname + "/../public/images/favicons/fi_standard.ico"));
   app.use(express.static(__dirname + "/../public"));
@@ -94,13 +95,13 @@ app.get("/dialog", function(req, res) {
   res.render("partials/dialog", data);
 });
 
-app.listen(config.server.port);
-sys.debug("\x1b[1mExpress server started on port " + app.address().port + "\x1b[0m");
+var server = app.listen(config.server.port);
+sys.debug("\x1b[1mExpress server started on port " + server.port + "\x1b[0m");
 
-sockapp.listen(config.server.socketport);
-sys.debug("\x1b[1mExpress WebSocket server started on port " + sockapp.address().port + "\x1b[0m\n");
+var sockServer = sockapp.listen(config.server.socketport);
+sys.debug("\x1b[1mExpress WebSocket server started on port " + sockServer.port + "\x1b[0m\n");
 
-var io = socketio.listen(sockapp);
+var io = socketio.listen(sockServer);
 io.sockets.on("connection", function(socket) {
   te.subscribeOnce("referee:welcome", function(msg) {
     var copy = JSON.parse(JSON.stringify(msg));
